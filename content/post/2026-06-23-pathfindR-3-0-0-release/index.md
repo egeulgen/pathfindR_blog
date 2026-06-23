@@ -41,8 +41,8 @@ grows candidate subnetworks over a protein--protein interaction
 network - has been re-implemented entirely in R and C++ (via Rcpp),
 replacing the old Java JAR that pathfindR used to shell out to.
 
-In practice this means no JDK, no `rJava`, and no "Java not found"
-issues on a fresh machine. You install the package and it runs:
+In practice this means no JDK, and no "Java not found" issues on a fresh
+machine. You install the package and it runs:
 
 ``` r
 install.packages("pathfindR")        # or remotes::install_github("egeulgen/pathfindR")

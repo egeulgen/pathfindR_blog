@@ -10,7 +10,7 @@
 <meta property="og:title" content="pathfindR Relese 3.0.0 - pathfindR Blog">
 
 
-  <link href='https://egeulgen.github.io/pathfindR_blog/favicon.ico' rel='icon' type='image/x-icon'/>
+  <link href='https://egeulgen.github.io/img/favicon.ico' rel='icon' type='image/x-icon'/>
 
 
 
@@ -38,7 +38,7 @@
       <header class="header">
         <nav class="nav">
   <a href="/" class="nav-logo">
-    <img src="/pathfindR_blog/images/logo.png"
+    <img src="/pathfindR_blog/images/img/logo.png"
          width="50"
          height="50"
          alt="Logo">
@@ -102,8 +102,8 @@ the Java dependency is gone. Active subnetwork search - the step that
 grows candidate subnetworks over a protein&ndash;protein interaction
 network - has been re-implemented entirely in R and C++ (via Rcpp),
 replacing the old Java JAR that pathfindR used to shell out to.</p>
-<p>In practice this means no JDK, no <code>rJava</code>, and no &ldquo;Java not found&rdquo;
-issues on a fresh machine. You install the package and it runs:</p>
+<p>In practice this means no JDK, and no &ldquo;Java not found&rdquo; issues on a fresh
+machine. You install the package and it runs:</p>
 <pre><code class="language-r">install.packages(&quot;pathfindR&quot;)        # or remotes::install_github(&quot;egeulgen/pathfindR&quot;)
 library(pathfindR)
  
