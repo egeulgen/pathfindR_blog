@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+	<channel>
+		<title>Tags on pathfindR Blog</title>
+		<link>https://egeulgen.github.io/pathfindR_blog/tags/</link>
+		<description>Recent content in Tags on pathfindR Blog</description>
+		<generator>Hugo</generator>
+		<language>en-US</language>
+		
+		
+		
+		
+			<lastBuildDate>Tue, 23 Jun 2026 00:00:00 +0000</lastBuildDate>
+		
+			<atom:link href="https://egeulgen.github.io/pathfindR_blog/tags/index.xml" rel="self" type="application/rss+xml" />
+			<item>
+				<title>Bioinformatics</title>
+				<link>https://egeulgen.github.io/pathfindR_blog/tags/bioinformatics/</link>
+				<pubDate>Tue, 23 Jun 2026 00:00:00 +0000</pubDate>
+				<guid>https://egeulgen.github.io/pathfindR_blog/tags/bioinformatics/</guid>
+				<description></description>
+			</item>
+			<item>
+				<title>Enrichment</title>
+				<link>https://egeulgen.github.io/pathfindR_blog/tags/enrichment/</link>
+				<pubDate>Tue, 23 Jun 2026 00:00:00 +0000</pubDate>
+				<guid>https://egeulgen.github.io/pathfindR_blog/tags/enrichment/</guid>
+				<description></description>
+			</item>
+			<item>
+				<title>R Package</title>
+				<link>https://egeulgen.github.io/pathfindR_blog/tags/r-package/</link>
+				<pubDate>Tue, 23 Jun 2026 00:00:00 +0000</pubDate>
+				<guid>https://egeulgen.github.io/pathfindR_blog/tags/r-package/</guid>
+				<description></description>
+			</item>
+			<item>
+				<title>Release</title>
+				<link>https://egeulgen.github.io/pathfindR_blog/tags/release/</link>
+				<pubDate>Tue, 23 Jun 2026 00:00:00 +0000</pubDate>
+				<guid>https://egeulgen.github.io/pathfindR_blog/tags/release/</guid>
+				<description></description>
+			</item>
+	</channel>
+</rss>

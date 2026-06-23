@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.163.3">
+
+
+<title>pathfindR Relese 3.0.0 - pathfindR Blog</title>
+<meta property="og:title" content="pathfindR Relese 3.0.0 - pathfindR Blog">
+
+
+  <link href='https://egeulgen.github.io/pathfindR_blog/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/pathfindR_blog/css/fonts.css" media="all">
+<link rel="stylesheet" href="/pathfindR_blog/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/pathfindR_blog/images/logo.png"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/pathfindR_blog/about/">About</a></li>
+    
+    <li><a href="https://github.com/egeulgen/pathfindR">GitHub</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">2 min read</span>
+    
+
+    <h1 class="article-title">pathfindR Relese 3.0.0</h1>
+
+    
+    <span class="article-date">2026-06-23</span>
+    
+
+    <div class="article-content">
+      
+      <h2 id="what-is-pathfindr">What is pathfindR?</h2>
+<p><code>pathfindR</code> is an R package for <strong>enrichment analysis via active
+subnetworks</strong>. Conventional enrichment methods ignore protein&ndash;protein
+interaction (PPI) information, which can leave the picture incomplete.
+pathfindR&rsquo;s main function identifies active subnetworks in a
+protein-protein interaction network using a user-provided list of genes
+and associated p values, then performs enrichment analyses on those
+subnetworks to identify enriched terms (pathways, or more broadly, gene
+sets) that may underlie the phenotype of interest.</p>
+<p>Beyond the core workflow, pathfindR also lets you:</p>
+<ul>
+<li>cluster the enriched terms and identify a representative term in each
+cluster,</li>
+<li>score the enriched terms on a per-sample basis, and</li>
+<li>compare two pathfindR results against each other.</li>
+</ul>
+<p>The methods are described in detail in Ulgen E, Ozisik O, Sezerman OU
+(2019), <em>pathfindR: An R Package for Comprehensive Identification of
+Enriched Pathways in Omics Data Through Active Subnetworks</em>, Front.
+Genet.
+(<a href="https://doi.org/10.3389/fgene.2019.00858">doi:10.3389/fgene.2019.00858</a>).</p>
+<h2 id="whats-new">What&rsquo;s new?</h2>
+<p>The headline of pathfindR 3.0.0 is something you mostly <em>won&rsquo;t</em> notice:
+the Java dependency is gone. Active subnetwork search - the step that
+grows candidate subnetworks over a protein&ndash;protein interaction
+network - has been re-implemented entirely in R and C++ (via Rcpp),
+replacing the old Java JAR that pathfindR used to shell out to.</p>
+<p>In practice this means no JDK, no <code>rJava</code>, and no &ldquo;Java not found&rdquo;
+issues on a fresh machine. You install the package and it runs:</p>
+<pre><code class="language-r">install.packages(&quot;pathfindR&quot;)        # or remotes::install_github(&quot;egeulgen/pathfindR&quot;)
+library(pathfindR)
+ 
+output &lt;- run_pathfindR(example_pathfindR_input)
+</code></pre>
+<p>The greedy and simulated-annealing search methods produce results that
+are numerically identical to the old JAR given the same seed and inputs,
+so existing analyses remain reproducible - you&rsquo;re just getting them
+without the extra runtime to install and configure.</p>
+<h2 id="a-few-renames">A few renames</h2>
+<p>Some exported functions were renamed to follow a more consistent,
+snake_case style. If you call these directly in scripts, update the
+names:</p>
+<ul>
+<li>
+<p><code>active_snw_search()</code> → <code>get_active_subnetworks()</code> (its signature
+changed too)</p>
+</li>
+<li>
+<p><code>filterActiveSnws()</code> → <code>filter_active_subnetworks()</code></p>
+</li>
+</ul>
+<p>The most common entry point, <code>run_pathfindR()</code>, is unchanged.</p>
+<h2 id="termgene-graph-split-in-two">Term&ndash;gene graph, split in two</h2>
+<p>The old <code>term_gene_graph()</code> did two jobs at once: build the graph and
+draw it. Those are now separate, which makes it much easier to tweak the
+visualization or reuse the underlying structure:</p>
+<ul>
+<li><code>create_term_gene_graph()</code> builds the <code>igraph</code> object.</li>
+<li><code>create_term_gene_plot()</code> renders a plot from that object.</li>
+</ul>
+<pre><code class="language-r">g &lt;- create_term_gene_graph(output, num_terms = 10)
+create_term_gene_plot(g)
+</code></pre>
+<h2 id="should-you-upgrade">Should you upgrade?</h2>
+<p>Yes! especially if Java setup has ever bitten you or your collaborators.
+The science is the same, the results are the same, and the install is
+now a single, self-contained step. Full notes are in the
+<a href="https://github.com/egeulgen/pathfindR/blob/master/NEWS.md">changelog</a>.</p>
+
+    </div>
+  </article>
+
+  
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/pathfindR_blog/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/r.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+
+    
+  </body>
+</html>
+
