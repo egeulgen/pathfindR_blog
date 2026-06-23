@@ -12,6 +12,8 @@ menu:
       url: "/about/"
     - name: GitHub
       url: "https://github.com/egeulgen/pathfindR"
+    - name: RSS
+      url: "/index.xml"
 params:
   description: "News, tutorials, and release notes for pathfindR — enrichment analysis utilizing active subnetworks."
   highlightjsVersion: "9.12.0"
