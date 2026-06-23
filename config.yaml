@@ -24,9 +24,9 @@ params:
   highlightjsTheme: "github"
   MathJaxCDN: "//cdnjs.cloudflare.com/ajax/libs"
   MathJaxVersion: "2.7.5"
-  favicon: "/img/favicon.ico"
+  favicon: "img/favicon.ico"
   logo:
-    url: "/img/logo.png"
+    url: "img/logo.png"
     width: 50
     height: 50
     alt: "Logo"
