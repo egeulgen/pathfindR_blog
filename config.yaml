@@ -12,6 +12,8 @@ menu:
       url: "/about/"
     - name: GitHub
       url: "https://github.com/egeulgen/pathfindR"
+    - name: R-bloggers
+      url: "https://www.r-bloggers.com/"
     - name: RSS
       url: "/index.xml"
 params:
