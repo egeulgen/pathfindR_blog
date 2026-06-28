@@ -14,10 +14,10 @@
 		
 			<atom:link href="https://egeulgen.github.io/pathfindR_blog/post/index.xml" rel="self" type="application/rss+xml" />
 			<item>
-				<title>pathfindR Relese 3.0.0</title>
-				<link>https://egeulgen.github.io/pathfindR_blog/2026/06/23/pathfindr-relese-3.0.0/</link>
+				<title>pathfindR Release 3.0.0</title>
+				<link>https://egeulgen.github.io/pathfindR_blog/2026/06/23/pathfindr-release-3.0.0/</link>
 				<pubDate>Tue, 23 Jun 2026 00:00:00 +0000</pubDate>
-				<guid>https://egeulgen.github.io/pathfindR_blog/2026/06/23/pathfindr-relese-3.0.0/</guid>
+				<guid>https://egeulgen.github.io/pathfindR_blog/2026/06/23/pathfindr-release-3.0.0/</guid>
 				<description>&lt;h2 id=&#34;what-is-pathfindr&#34;&gt;What is pathfindR?&lt;/h2&gt;&#xA;&lt;p&gt;&lt;code&gt;pathfindR&lt;/code&gt; is an R package for &lt;strong&gt;enrichment analysis via active&#xA;subnetworks&lt;/strong&gt;. Conventional enrichment methods ignore protein&amp;ndash;protein&#xA;interaction (PPI) information, which can leave the picture incomplete.&#xA;pathfindR&amp;rsquo;s main function identifies active subnetworks in a&#xA;protein-protein interaction network using a user-provided list of genes&#xA;and associated p values, then performs enrichment analyses on those&#xA;subnetworks to identify enriched terms (pathways, or more broadly, gene&#xA;sets) that may underlie the phenotype of interest.&lt;/p&gt;</description>
 			</item>
 	</channel>

@@ -1,5 +1,5 @@
 ---
-title: "pathfindR Relese 3.0.0"
+title: "pathfindR Release 3.0.0"
 author: "Ege Ulgen"
 date: 2026-06-23
 categories: ["R"]
