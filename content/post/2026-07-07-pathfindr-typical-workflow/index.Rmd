@@ -1,0 +1,199 @@
+---
+title: "A Typical pathfindR Workflow"
+author: "Ege Ulgen"
+date: "2026-07-07"
+slug: pathfindr-typical-workflow
+categories:
+  - R
+  - bioinformatics
+tags:
+  - tutorial
+  - enrichment-analysis
+  - pathways
+  - active-subnetworks
+output:
+  blogdown::html_page:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.align = "center",
+  fig.width = 8,
+  fig.height = 6
+)
+```
+
+[pathfindR](https://github.com/egeulgen/pathfindR/) is an R package for
+pathway/gene-set enrichment analysis that does something most enrichment tools
+don't: instead of testing your gene list directly, it first maps your genes onto
+a protein–protein interaction network (PIN), finds **active subnetworks**
+(connected groups of interacting genes that are enriched for significantly
+altered genes), and then runs enrichment on those subnetworks. The payoff is that
+genes which don't pass your significance cutoff on their own (but sit in the
+middle of a cluster of genes that do) still get a chance to contribute.
+
+This post walks through a typical workflow end to end: run the analysis, cluster
+the results, visualize, and score terms per sample.
+
+## What changed in 3.0.0: no more Java
+
+If you used older versions, you'll remember the asterisk next to "easy install":
+the active subnetwork search ran on a bundled Java `.jar`, so you needed a JRE on
+your `PATH` and a fair amount of "is Java configured correctly?" troubleshooting.
+
+As of **pathfindR 3.0.0**, that's gone. The greedy (GR), simulated annealing
+(SA), and genetic (GA) search algorithms have been re-implemented in R and C++
+(via Rcpp), and the Java dependency was removed entirely. For GR and SA, results
+are numerically identical to the legacy JAR given the same seed and inputs so
+this is a drop-in upgrade, not a behaviour change. Installation is now just:
+
+```{r install, eval=FALSE}
+install.packages("pathfindR")
+```
+
+That's the whole story. No `JAVA_HOME`, no PATH surgery.
+
+## The input
+
+The input is a simple data frame with three columns: a gene symbol, an
+(optional) change value such as log-fold-change, and a p-value. pathfindR ships
+with an example derived from a rheumatoid arthritis vs. healthy
+differential-expression dataset (GEO `GSE15573`):
+
+```{r input}
+library(pathfindR)
+
+head(example_pathfindR_input)
+```
+
+## Running the analysis
+
+The wrapper `run_pathfindR()` takes you from input to enriched terms in one call:
+it processes the input, maps it onto the PIN, searches for active subnetworks,
+and runs enrichment over a chosen number of iterations.
+
+```{r run, eval=FALSE}
+output_df <- run_pathfindR(example_pathfindR_input)
+```
+
+A few arguments worth knowing (all optional):
+
+```{r run-args, eval=FALSE}
+# pick the gene sets (default = "KEGG")
+output_df <- run_pathfindR(example_pathfindR_input, gene_sets = "GO-MF")
+
+# pick the PIN for the subnetwork search (default = "Biogrid")
+output_df <- run_pathfindR(example_pathfindR_input, pin_name_path = "STRING")
+
+# write the HTML report somewhere specific
+output_df <- run_pathfindR(example_pathfindR_input, output_dir = "RA_results")
+```
+
+Available PINs include `"Biogrid"`, `"STRING"`, `"GeneMania"`, `"IntAct"`,
+`"KEGG"` and `"mmu_STRING"`; available gene sets include `"KEGG"`, `"Reactome"`,
+`"BioCarta"`, the GO families (`"GO-All"`, `"GO-BP"`, `"GO-CC"`, `"GO-MF"`) and
+`"mmu_KEGG"`. You can also supply a custom PIN or custom gene sets.
+
+The result is a data frame, one row per enriched term, with the term ID and
+description, enrichment p-values (lowest/highest across iterations), fold
+enrichment, and the affected up-/down-regulated input genes. The package also
+bundles a pre-computed copy of this output so we can keep going without waiting
+on the search:
+
+```{r output}
+head(example_pathfindR_output, 4)
+```
+
+A quick way to eyeball the top hits is the enrichment chart, a bubble plot of the
+most significant terms:
+
+```{r enrichment-chart}
+enrichment_chart(example_pathfindR_output, top_terms = 15)
+```
+
+## Clustering the enriched terms
+
+Enrichment output is often redundant, several terms describe overlapping
+biology. `cluster_enriched_terms()` computes pairwise kappa statistics between
+terms, clusters them (hierarchical by default), picks the cluster count that
+maximizes the average silhouette width, and tags one **representative** term per
+cluster:
+
+```{r cluster}
+clustered_df <- cluster_enriched_terms(example_pathfindR_output)
+
+# the representative term from each cluster
+clustered_df[clustered_df$Status == "Representative", c("Term_Description", "Cluster")]
+
+enrichment_chart(example_pathfindR_output, plot_by_cluster = TRUE)
+```
+
+Filtering to representatives gives you a compact, non-redundant shortlist to
+report. There's also a `method = "fuzzy"` option if you'd rather let terms belong
+to more than one cluster.
+
+## Visualizing results
+
+Beyond the enrichment chart, two visuals are especially handy.
+
+A **term–gene heatmap** shows which input genes drive which terms. If you pass
+the original input, tiles are colored by change value:
+
+```{r heatmap}
+term_gene_heatmap(example_pathfindR_output, example_pathfindR_input, num_terms = 10)
+```
+
+A **term–gene graph** shows the same relationships as a network, making shared
+genes between terms obvious. As of 3.x this is split into a builder and a
+plotter:
+
+```{r term-gene-graph}
+g <- create_term_gene_graph(example_pathfindR_output, num_terms = 10)
+create_term_gene_plot(g)
+```
+
+## Scoring terms per sample
+
+If you have a per-sample expression matrix, `score_terms()` computes an
+agglomerated z-score for each enriched term in each sample — useful for seeing
+whether a pathway is collectively activated or repressed in particular samples or
+groups:
+
+```{r score}
+case_sample_ids <- c(
+  "GSM389703", "GSM389704", "GSM389705", "GSM389706", "GSM389707", "GSM389708"
+)
+score_matrix <- score_terms(
+  enrichment_table = clustered_df[clustered_df$Status == "Representative", ],
+  exp_mat          = example_experiment_matrix,   # genes x samples
+  cases            = case_sample_ids,             # optional
+  plot_hmap        = TRUE
+)
+```
+
+## Putting it together
+
+The whole everyday workflow is really just:
+
+```{r full, eval=FALSE}
+library(pathfindR)
+
+output_df    <- run_pathfindR(example_pathfindR_input)          # enrichment
+clustered_df <- cluster_enriched_terms(output_df)               # de-duplicate
+enrichment_chart(clustered_df, plot_by_cluster=TRUE)            # visualize
+term_gene_heatmap(output_df, example_pathfindR_input)           # who drives what
+```
+
+Four functions, and no Java to install. If you're comparing two
+conditions, take a look at `combine_pathfindR_results()` too.
+
+---
+
+*pathfindR is described in Ulgen E, Ozisik O, Sezerman OU. 2019.
+pathfindR: An R Package for Comprehensive Identification of Enriched Pathways in
+Omics Data Through Active Subnetworks. Front. Genet.
+<https://doi.org/10.3389/fgene.2019.00858>. Docs:
+<https://egeulgen.github.io/pathfindR/>.*
