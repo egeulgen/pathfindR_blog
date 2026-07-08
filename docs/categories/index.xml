@@ -1,31 +1,29 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-	<channel>
-		<title>Categories on pathfindR Blog</title>
-		<link>https://egeulgen.github.io/pathfindR_blog/categories/</link>
-		<description>Recent content in Categories on pathfindR Blog</description>
-		<generator>Hugo</generator>
-		<language>en-US</language>
-		
-		
-		
-		
-			<lastBuildDate>Tue, 07 Jul 2026 00:00:00 +0000</lastBuildDate>
-		
-			<atom:link href="https://egeulgen.github.io/pathfindR_blog/categories/index.xml" rel="self" type="application/rss+xml" />
-			<item>
-				<title>Bioinformatics</title>
-				<link>https://egeulgen.github.io/pathfindR_blog/categories/bioinformatics/</link>
-				<pubDate>Tue, 07 Jul 2026 00:00:00 +0000</pubDate>
-				<guid>https://egeulgen.github.io/pathfindR_blog/categories/bioinformatics/</guid>
-				<description></description>
-			</item>
-			<item>
-				<title>R</title>
-				<link>https://egeulgen.github.io/pathfindR_blog/categories/r/</link>
-				<pubDate>Tue, 07 Jul 2026 00:00:00 +0000</pubDate>
-				<guid>https://egeulgen.github.io/pathfindR_blog/categories/r/</guid>
-				<description></description>
-			</item>
-	</channel>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Categories on pathfindR Blog</title>
+    <link>https://egeulgen.github.io/pathfindR_blog/categories/</link>
+    <description>Recent content in Categories on pathfindR Blog</description>
+    <generator>Hugo</generator>
+    <language>en-US</language>
+    <lastBuildDate>Tue, 07 Jul 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://egeulgen.github.io/pathfindR_blog/categories/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Bioinformatics</title>
+      <link>https://egeulgen.github.io/pathfindR_blog/categories/bioinformatics/</link>
+      <pubDate>Tue, 07 Jul 2026 00:00:00 +0000</pubDate>
+      <guid>https://egeulgen.github.io/pathfindR_blog/categories/bioinformatics/</guid>
+      <description></description>
+      <content:encoded><![CDATA[]]></content:encoded>
+    </item>
+    
+    <item>
+      <title>R</title>
+      <link>https://egeulgen.github.io/pathfindR_blog/categories/r/</link>
+      <pubDate>Tue, 07 Jul 2026 00:00:00 +0000</pubDate>
+      <guid>https://egeulgen.github.io/pathfindR_blog/categories/r/</guid>
+      <description></description>
+      <content:encoded><![CDATA[]]></content:encoded>
+    </item>
+    
+  </channel>
 </rss>

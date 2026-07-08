@@ -1,24 +1,478 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-	<channel>
-		<title>Bioinformatics on pathfindR Blog</title>
-		<link>https://egeulgen.github.io/pathfindR_blog/categories/bioinformatics/</link>
-		<description>Recent content in Bioinformatics on pathfindR Blog</description>
-		<generator>Hugo</generator>
-		<language>en-US</language>
-		
-		
-		
-		
-			<lastBuildDate>Tue, 07 Jul 2026 00:00:00 +0000</lastBuildDate>
-		
-			<atom:link href="https://egeulgen.github.io/pathfindR_blog/categories/bioinformatics/index.xml" rel="self" type="application/rss+xml" />
-			<item>
-				<title>A Typical pathfindR Workflow</title>
-				<link>https://egeulgen.github.io/pathfindR_blog/2026/07/07/pathfindr-typical-workflow/</link>
-				<pubDate>Tue, 07 Jul 2026 00:00:00 +0000</pubDate>
-				<guid>https://egeulgen.github.io/pathfindR_blog/2026/07/07/pathfindr-typical-workflow/</guid>
-				<description>&lt;p&gt;&lt;a href=&#34;https://github.com/egeulgen/pathfindR/&#34;&gt;pathfindR&lt;/a&gt; is an R package for&#xA;pathway/gene-set enrichment analysis that does something most enrichment tools&#xA;don&amp;rsquo;t: instead of testing your gene list directly, it first maps your genes onto&#xA;a protein–protein interaction network (PIN), finds &lt;strong&gt;active subnetworks&lt;/strong&gt;&#xA;(connected groups of interacting genes that are enriched for significantly&#xA;altered genes), and then runs enrichment on those subnetworks. The payoff is that&#xA;genes which don&amp;rsquo;t pass your significance cutoff on their own (but sit in the&#xA;middle of a cluster of genes that do) still get a chance to contribute.&lt;/p&gt;</description>
-			</item>
-	</channel>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Bioinformatics on pathfindR Blog</title>
+    <link>https://egeulgen.github.io/pathfindR_blog/categories/bioinformatics/</link>
+    <description>Recent content in Bioinformatics on pathfindR Blog</description>
+    <generator>Hugo</generator>
+    <language>en-US</language>
+    <lastBuildDate>Tue, 07 Jul 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://egeulgen.github.io/pathfindR_blog/categories/bioinformatics/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>A Typical pathfindR Workflow</title>
+      <link>https://egeulgen.github.io/pathfindR_blog/2026/07/07/pathfindr-typical-workflow/</link>
+      <pubDate>Tue, 07 Jul 2026 00:00:00 +0000</pubDate>
+      <guid>https://egeulgen.github.io/pathfindR_blog/2026/07/07/pathfindr-typical-workflow/</guid>
+      <description>&lt;p&gt;&lt;a href=&#34;https://github.com/egeulgen/pathfindR/&#34;&gt;pathfindR&lt;/a&gt; is an R package for
+pathway/gene-set enrichment analysis that does something most enrichment tools
+don&amp;rsquo;t: instead of testing your gene list directly, it first maps your genes onto
+a protein–protein interaction network (PIN), finds &lt;strong&gt;active subnetworks&lt;/strong&gt;
+(connected groups of interacting genes that are enriched for significantly
+altered genes), and then runs enrichment on those subnetworks. The payoff is that
+genes which don&amp;rsquo;t pass your significance cutoff on their own (but sit in the
+middle of a cluster of genes that do) still get a chance to contribute.&lt;/p&gt;
+&lt;p&gt;This post walks through a typical workflow end to end: run the analysis, cluster
+the results, visualize, and score terms per sample.&lt;/p&gt;
+&lt;h2 id=&#34;what-changed-in-300-no-more-java&#34;&gt;What changed in 3.0.0: no more Java&lt;/h2&gt;
+&lt;p&gt;If you used older versions, you&amp;rsquo;ll remember the asterisk next to &amp;ldquo;easy install&amp;rdquo;:
+the active subnetwork search ran on a bundled Java &lt;code&gt;.jar&lt;/code&gt;, so you needed a JRE on
+your &lt;code&gt;PATH&lt;/code&gt; and a fair amount of &amp;ldquo;is Java configured correctly?&amp;rdquo; troubleshooting.&lt;/p&gt;
+&lt;p&gt;As of &lt;strong&gt;pathfindR 3.0.0&lt;/strong&gt;, that&amp;rsquo;s gone. The greedy (GR), simulated annealing
+(SA), and genetic (GA) search algorithms have been re-implemented in R and C++
+(via Rcpp), and the Java dependency was removed entirely. For GR and SA, results
+are numerically identical to the legacy JAR given the same seed and inputs so
+this is a drop-in upgrade, not a behaviour change. Installation is now just:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;install.packages(&amp;quot;pathfindR&amp;quot;)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;That&amp;rsquo;s the whole story. No &lt;code&gt;JAVA_HOME&lt;/code&gt;, no PATH surgery.&lt;/p&gt;
+&lt;h2 id=&#34;the-input&#34;&gt;The input&lt;/h2&gt;
+&lt;p&gt;The input is a simple data frame with three columns: a gene symbol, an
+(optional) change value such as log-fold-change, and a p-value. pathfindR ships
+with an example derived from a rheumatoid arthritis vs. healthy
+differential-expression dataset (GEO &lt;code&gt;GSE15573&lt;/code&gt;):&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;library(pathfindR)
+#&amp;gt; Loading required package: pathfindR.data
+
+head(example_pathfindR_input)
+#&amp;gt;   Gene.symbol    logFC  adj.P.Val
+#&amp;gt; 1     FAM110A -0.69394 3.4087e-06
+#&amp;gt; 2      RNASE2  1.35350 1.0085e-05
+#&amp;gt; 3      S100A8  1.54483 3.4664e-05
+#&amp;gt; 4      S100A9  1.02809 2.2626e-04
+#&amp;gt; 5      TEX261 -0.32360 2.2626e-04
+#&amp;gt; 6    ARHGAP17 -0.69193 2.7081e-04
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&#34;running-the-analysis&#34;&gt;Running the analysis&lt;/h2&gt;
+&lt;p&gt;The wrapper &lt;code&gt;run_pathfindR()&lt;/code&gt; takes you from input to enriched terms in one call:
+it processes the input, maps it onto the PIN, searches for active subnetworks,
+and runs enrichment over a chosen number of iterations.&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;output_df &amp;lt;- run_pathfindR(example_pathfindR_input)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;A few arguments worth knowing (all optional):&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;# pick the gene sets (default = &amp;quot;KEGG&amp;quot;)
+output_df &amp;lt;- run_pathfindR(example_pathfindR_input, gene_sets = &amp;quot;GO-MF&amp;quot;)
+
+# pick the PIN for the subnetwork search (default = &amp;quot;Biogrid&amp;quot;)
+output_df &amp;lt;- run_pathfindR(example_pathfindR_input, pin_name_path = &amp;quot;STRING&amp;quot;)
+
+# write the HTML report somewhere specific
+output_df &amp;lt;- run_pathfindR(example_pathfindR_input, output_dir = &amp;quot;RA_results&amp;quot;)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Available PINs include &lt;code&gt;&amp;quot;Biogrid&amp;quot;&lt;/code&gt;, &lt;code&gt;&amp;quot;STRING&amp;quot;&lt;/code&gt;, &lt;code&gt;&amp;quot;GeneMania&amp;quot;&lt;/code&gt;, &lt;code&gt;&amp;quot;IntAct&amp;quot;&lt;/code&gt;,
+&lt;code&gt;&amp;quot;KEGG&amp;quot;&lt;/code&gt; and &lt;code&gt;&amp;quot;mmu_STRING&amp;quot;&lt;/code&gt;; available gene sets include &lt;code&gt;&amp;quot;KEGG&amp;quot;&lt;/code&gt;, &lt;code&gt;&amp;quot;Reactome&amp;quot;&lt;/code&gt;,
+&lt;code&gt;&amp;quot;BioCarta&amp;quot;&lt;/code&gt;, the GO families (&lt;code&gt;&amp;quot;GO-All&amp;quot;&lt;/code&gt;, &lt;code&gt;&amp;quot;GO-BP&amp;quot;&lt;/code&gt;, &lt;code&gt;&amp;quot;GO-CC&amp;quot;&lt;/code&gt;, &lt;code&gt;&amp;quot;GO-MF&amp;quot;&lt;/code&gt;) and
+&lt;code&gt;&amp;quot;mmu_KEGG&amp;quot;&lt;/code&gt;. You can also supply a custom PIN or custom gene sets.&lt;/p&gt;
+&lt;p&gt;The result is a data frame, one row per enriched term, with the term ID and
+description, enrichment p-values (lowest/highest across iterations), fold
+enrichment, and the affected up-/down-regulated input genes. The package also
+bundles a pre-computed copy of this output so we can keep going without waiting
+on the search:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;head(example_pathfindR_output, 4)
+#&amp;gt;         ID                          Term_Description Fold_Enrichment occurrence
+#&amp;gt; 1 hsa05415                   Diabetic cardiomyopathy          3.7450         10
+#&amp;gt; 2 hsa03082        ATP-dependent chromatin remodeling          4.2131         10
+#&amp;gt; 3 hsa04130 SNARE interactions in vesicular transport          4.9366         10
+#&amp;gt; 4 hsa00190                 Oxidative phosphorylation          3.5587         10
+#&amp;gt;    support   lowest_p  highest_p
+#&amp;gt; 1 0.087103 4.1728e-15 1.1843e-08
+#&amp;gt; 2 0.024579 1.8507e-12 3.1203e-04
+#&amp;gt; 3 0.033857 2.8509e-09 8.7854e-09
+#&amp;gt; 4 0.044888 4.1980e-09 4.3382e-06
+#&amp;gt;                                                      Up_regulated
+#&amp;gt; 1 NCF4, NDUFA1, NDUFB3, UQCRQ, COX6A1, COX7A2, COX7C, MMP9, GAPDH
+#&amp;gt; 2                                                                
+#&amp;gt; 3                                                            STX6
+#&amp;gt; 4 NDUFB3, NDUFA1, COX7C, COX7A2, UQCRQ, COX6A1, ATP6V1D, ATP6V0E1
+#&amp;gt;                                                  Down_regulated
+#&amp;gt; 1              SLC25A5, VDAC1, ATP2A2, MTOR, PDHA1, PDHB, PARP1
+#&amp;gt; 2 ARID1A, SMARCA4, ACTB, ACTG1, BRD7, BRD9, HDAC1, EP400, TRRAP
+#&amp;gt; 3                                           BET1L, SNAP23, STX2
+#&amp;gt; 4                                                      ATP6V0E2
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;A quick way to eyeball the top hits is the enrichment chart, a bubble plot of the
+most significant terms:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;enrichment_chart(example_pathfindR_output, top_terms = 15)
+#&amp;gt; Plotting the enrichment bubble chart
+&lt;/code&gt;&lt;/pre&gt;
+&lt;img src=&#34;https://egeulgen.github.io/pathfindR_blog/2026/07/07/pathfindr-typical-workflow/index_files/figure-html/enrichment-chart-1.png&#34; alt=&#34;&#34; width=&#34;768&#34; style=&#34;display: block; margin: auto;&#34; /&gt;
+&lt;h2 id=&#34;clustering-the-enriched-terms&#34;&gt;Clustering the enriched terms&lt;/h2&gt;
+&lt;p&gt;Enrichment output is often redundant, several terms describe overlapping
+biology. &lt;code&gt;cluster_enriched_terms()&lt;/code&gt; computes pairwise kappa statistics between
+terms, clusters them (hierarchical by default), picks the cluster count that
+maximizes the average silhouette width, and tags one &lt;strong&gt;representative&lt;/strong&gt; term per
+cluster:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;clustered_df &amp;lt;- cluster_enriched_terms(example_pathfindR_output)
+#&amp;gt; The maximum average silhouette width was 0.24 for k = 60
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;https://egeulgen.github.io/pathfindR_blog/2026/07/07/pathfindr-typical-workflow/index_files/figure-html/cluster-1.png&#34; alt=&#34;&#34; width=&#34;768&#34; style=&#34;display: block; margin: auto;&#34; /&gt;&lt;img src=&#34;https://egeulgen.github.io/pathfindR_blog/2026/07/07/pathfindr-typical-workflow/index_files/figure-html/cluster-2.png&#34; alt=&#34;&#34; width=&#34;768&#34; style=&#34;display: block; margin: auto;&#34; /&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;
+# the representative term from each cluster
+clustered_df[clustered_df$Status == &amp;quot;Representative&amp;quot;, c(&amp;quot;Term_Description&amp;quot;, &amp;quot;Cluster&amp;quot;)]
+#&amp;gt;                                       Term_Description Cluster
+#&amp;gt; 1                              Diabetic cardiomyopathy       1
+#&amp;gt; 2                   ATP-dependent chromatin remodeling       2
+#&amp;gt; 3            SNARE interactions in vesicular transport       3
+#&amp;gt; 7                          Nucleocytoplasmic transport       4
+#&amp;gt; 11                        NF-kappa B signaling pathway       5
+#&amp;gt; 12                         Polycomb repressive complex       6
+#&amp;gt; 14                              Fatty acid degradation       7
+#&amp;gt; 15                                         Spliceosome       8
+#&amp;gt; 18                                     Mismatch repair       9
+#&amp;gt; 19                                         Shigellosis      10
+#&amp;gt; 20                           Th17 cell differentiation      11
+#&amp;gt; 21             Human T-cell leukemia virus 1 infection      12
+#&amp;gt; 22                          Nucleotide excision repair      13
+#&amp;gt; 23         Protein processing in endoplasmic reticulum      14
+#&amp;gt; 24                          TGF-beta signaling pathway      15
+#&amp;gt; 25                                   Carbon metabolism      16
+#&amp;gt; 26                                           Apoptosis      17
+#&amp;gt; 27                                Salmonella infection      18
+#&amp;gt; 28                          Oxytocin signaling pathway      19
+#&amp;gt; 29                          JAK-STAT signaling pathway      20
+#&amp;gt; 32                                  IgSF CAM signaling      21
+#&amp;gt; 33                      Collecting duct acid secretion      22
+#&amp;gt; 37                     Adipocytokine signaling pathway      23
+#&amp;gt; 38                      Ubiquitin mediated proteolysis      24
+#&amp;gt; 40                              Rap1 signaling pathway      25
+#&amp;gt; 42                            Chronic myeloid leukemia      26
+#&amp;gt; 44                                Viral carcinogenesis      27
+#&amp;gt; 45                                 Cellular senescence      28
+#&amp;gt; 46                                          Proteasome      29
+#&amp;gt; 47                                  Autophagy - animal      30
+#&amp;gt; 51                                       Toxoplasmosis      31
+#&amp;gt; 52                      Neurotrophin signaling pathway      32
+#&amp;gt; 55                              mTOR signaling pathway      33
+#&amp;gt; 56                                          Cell cycle      34
+#&amp;gt; 57                              Spinocerebellar ataxia      35
+#&amp;gt; 61                  Cysteine and methionine metabolism      36
+#&amp;gt; 64                   T cell receptor signaling pathway      37
+#&amp;gt; 65            Vasopressin-regulated water reabsorption      38
+#&amp;gt; 66             Neutrophil extracellular trap formation      39
+#&amp;gt; 68              Fluid shear stress and atherosclerosis      40
+#&amp;gt; 70             Transcriptional misregulation in cancer      41
+#&amp;gt; 73                                        Phagocytosis      42
+#&amp;gt; 77                                           Pertussis      43
+#&amp;gt; 79                                         Influenza A      44
+#&amp;gt; 81                    Herpes simplex virus 1 infection      45
+#&amp;gt; 86                             IL-17 signaling pathway      46
+#&amp;gt; 92  Integrated stress response (ISR) signaling pathway      47
+#&amp;gt; 97                        Epstein-Barr virus infection      48
+#&amp;gt; 99                                 Lysosome biogenesis      49
+#&amp;gt; 111                          mRNA surveillance pathway      50
+#&amp;gt; 114                    Arginine and proline metabolism      51
+#&amp;gt; 118                          Lipid and atherosclerosis      52
+#&amp;gt; 123                         Osteoclast differentiation      53
+#&amp;gt; 124                                           Ribosome      54
+#&amp;gt; 126                             FoxO signaling pathway      55
+#&amp;gt; 131               Retrograde endocannabinoid signaling      56
+#&amp;gt; 132                              TNF signaling pathway      57
+#&amp;gt; 134                               Galactose metabolism      58
+#&amp;gt; 136            Fc gamma R-mediated phagosome formation      59
+#&amp;gt; 137                              Antifolate resistance      60
+
+enrichment_chart(example_pathfindR_output, plot_by_cluster = TRUE)
+#&amp;gt; Plotting the enrichment bubble chart
+#&amp;gt; For plotting by cluster, there must a column named `Cluster` in the input data frame!
+&lt;/code&gt;&lt;/pre&gt;
+&lt;img src=&#34;https://egeulgen.github.io/pathfindR_blog/2026/07/07/pathfindr-typical-workflow/index_files/figure-html/cluster-3.png&#34; alt=&#34;&#34; width=&#34;768&#34; style=&#34;display: block; margin: auto;&#34; /&gt;
+&lt;p&gt;Filtering to representatives gives you a compact, non-redundant shortlist to
+report. There&amp;rsquo;s also a &lt;code&gt;method = &amp;quot;fuzzy&amp;quot;&lt;/code&gt; option if you&amp;rsquo;d rather let terms belong
+to more than one cluster.&lt;/p&gt;
+&lt;h2 id=&#34;visualizing-results&#34;&gt;Visualizing results&lt;/h2&gt;
+&lt;p&gt;Beyond the enrichment chart, two visuals are especially handy.&lt;/p&gt;
+&lt;p&gt;A &lt;strong&gt;term–gene heatmap&lt;/strong&gt; shows which input genes drive which terms. If you pass
+the original input, tiles are colored by change value:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;term_gene_heatmap(example_pathfindR_output, example_pathfindR_input, num_terms = 10)
+#&amp;gt; ## Processing input. Converting gene symbols,
+#&amp;gt;           if necessary (and if human gene symbols provided)
+#&amp;gt; Number of genes provided in input: 572
+#&amp;gt; Number of genes in input after p-value filtering: 572
+#&amp;gt; 
+#&amp;gt; Could not find any interactions for 1 (0.17%) genes in the PIN
+#&amp;gt; Final number of genes in input: 571
+&lt;/code&gt;&lt;/pre&gt;
+&lt;img src=&#34;https://egeulgen.github.io/pathfindR_blog/2026/07/07/pathfindr-typical-workflow/index_files/figure-html/heatmap-1.png&#34; alt=&#34;&#34; width=&#34;768&#34; style=&#34;display: block; margin: auto;&#34; /&gt;
+&lt;p&gt;A &lt;strong&gt;term–gene graph&lt;/strong&gt; shows the same relationships as a network, making shared
+genes between terms obvious. As of 3.x this is split into a builder and a
+plotter:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;g &amp;lt;- create_term_gene_graph(example_pathfindR_output, num_terms = 10)
+create_term_gene_plot(g)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;img src=&#34;https://egeulgen.github.io/pathfindR_blog/2026/07/07/pathfindr-typical-workflow/index_files/figure-html/term-gene-graph-1.png&#34; alt=&#34;&#34; width=&#34;768&#34; style=&#34;display: block; margin: auto;&#34; /&gt;
+&lt;h2 id=&#34;scoring-terms-per-sample&#34;&gt;Scoring terms per sample&lt;/h2&gt;
+&lt;p&gt;If you have a per-sample expression matrix, &lt;code&gt;score_terms()&lt;/code&gt; computes an
+agglomerated z-score for each enriched term in each sample — useful for seeing
+whether a pathway is collectively activated or repressed in particular samples or
+groups:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;case_sample_ids &amp;lt;- c(
+  &amp;quot;GSM389703&amp;quot;, &amp;quot;GSM389704&amp;quot;, &amp;quot;GSM389705&amp;quot;, &amp;quot;GSM389706&amp;quot;, &amp;quot;GSM389707&amp;quot;, &amp;quot;GSM389708&amp;quot;
+)
+score_matrix &amp;lt;- score_terms(
+  enrichment_table = clustered_df[clustered_df$Status == &amp;quot;Representative&amp;quot;, ],
+  exp_mat          = example_experiment_matrix,   # genes x samples
+  cases            = case_sample_ids,             # optional
+  plot_hmap        = TRUE
+)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;img src=&#34;https://egeulgen.github.io/pathfindR_blog/2026/07/07/pathfindr-typical-workflow/index_files/figure-html/score-1.png&#34; alt=&#34;&#34; width=&#34;768&#34; style=&#34;display: block; margin: auto;&#34; /&gt;
+&lt;h2 id=&#34;putting-it-together&#34;&gt;Putting it together&lt;/h2&gt;
+&lt;p&gt;The whole everyday workflow is really just:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-r&#34;&gt;library(pathfindR)
+
+output_df    &amp;lt;- run_pathfindR(example_pathfindR_input)          # enrichment
+clustered_df &amp;lt;- cluster_enriched_terms(output_df)               # de-duplicate
+enrichment_chart(clustered_df, plot_by_cluster=TRUE)            # visualize
+term_gene_heatmap(output_df, example_pathfindR_input)           # who drives what
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Four functions, and no Java to install. If you&amp;rsquo;re comparing two
+conditions, take a look at &lt;code&gt;combine_pathfindR_results()&lt;/code&gt; too.&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;em&gt;pathfindR is described in Ulgen E, Ozisik O, Sezerman OU. 2019.
+pathfindR: An R Package for Comprehensive Identification of Enriched Pathways in
+Omics Data Through Active Subnetworks. Front. Genet.
+&lt;a href=&#34;https://doi.org/10.3389/fgene.2019.00858&#34;&gt;https://doi.org/10.3389/fgene.2019.00858&lt;/a&gt;. Docs:
+&lt;a href=&#34;https://egeulgen.github.io/pathfindR/&#34;&gt;https://egeulgen.github.io/pathfindR/&lt;/a&gt;.&lt;/em&gt;&lt;/p&gt;
+</description>
+      <content:encoded><![CDATA[<p><a href="https://github.com/egeulgen/pathfindR/">pathfindR</a> is an R package for
+pathway/gene-set enrichment analysis that does something most enrichment tools
+don&rsquo;t: instead of testing your gene list directly, it first maps your genes onto
+a protein–protein interaction network (PIN), finds <strong>active subnetworks</strong>
+(connected groups of interacting genes that are enriched for significantly
+altered genes), and then runs enrichment on those subnetworks. The payoff is that
+genes which don&rsquo;t pass your significance cutoff on their own (but sit in the
+middle of a cluster of genes that do) still get a chance to contribute.</p>
+<p>This post walks through a typical workflow end to end: run the analysis, cluster
+the results, visualize, and score terms per sample.</p>
+<h2 id="what-changed-in-300-no-more-java">What changed in 3.0.0: no more Java</h2>
+<p>If you used older versions, you&rsquo;ll remember the asterisk next to &ldquo;easy install&rdquo;:
+the active subnetwork search ran on a bundled Java <code>.jar</code>, so you needed a JRE on
+your <code>PATH</code> and a fair amount of &ldquo;is Java configured correctly?&rdquo; troubleshooting.</p>
+<p>As of <strong>pathfindR 3.0.0</strong>, that&rsquo;s gone. The greedy (GR), simulated annealing
+(SA), and genetic (GA) search algorithms have been re-implemented in R and C++
+(via Rcpp), and the Java dependency was removed entirely. For GR and SA, results
+are numerically identical to the legacy JAR given the same seed and inputs so
+this is a drop-in upgrade, not a behaviour change. Installation is now just:</p>
+<pre><code class="language-r">install.packages(&quot;pathfindR&quot;)
+</code></pre>
+<p>That&rsquo;s the whole story. No <code>JAVA_HOME</code>, no PATH surgery.</p>
+<h2 id="the-input">The input</h2>
+<p>The input is a simple data frame with three columns: a gene symbol, an
+(optional) change value such as log-fold-change, and a p-value. pathfindR ships
+with an example derived from a rheumatoid arthritis vs. healthy
+differential-expression dataset (GEO <code>GSE15573</code>):</p>
+<pre><code class="language-r">library(pathfindR)
+#&gt; Loading required package: pathfindR.data
+
+head(example_pathfindR_input)
+#&gt;   Gene.symbol    logFC  adj.P.Val
+#&gt; 1     FAM110A -0.69394 3.4087e-06
+#&gt; 2      RNASE2  1.35350 1.0085e-05
+#&gt; 3      S100A8  1.54483 3.4664e-05
+#&gt; 4      S100A9  1.02809 2.2626e-04
+#&gt; 5      TEX261 -0.32360 2.2626e-04
+#&gt; 6    ARHGAP17 -0.69193 2.7081e-04
+</code></pre>
+<h2 id="running-the-analysis">Running the analysis</h2>
+<p>The wrapper <code>run_pathfindR()</code> takes you from input to enriched terms in one call:
+it processes the input, maps it onto the PIN, searches for active subnetworks,
+and runs enrichment over a chosen number of iterations.</p>
+<pre><code class="language-r">output_df &lt;- run_pathfindR(example_pathfindR_input)
+</code></pre>
+<p>A few arguments worth knowing (all optional):</p>
+<pre><code class="language-r"># pick the gene sets (default = &quot;KEGG&quot;)
+output_df &lt;- run_pathfindR(example_pathfindR_input, gene_sets = &quot;GO-MF&quot;)
+
+# pick the PIN for the subnetwork search (default = &quot;Biogrid&quot;)
+output_df &lt;- run_pathfindR(example_pathfindR_input, pin_name_path = &quot;STRING&quot;)
+
+# write the HTML report somewhere specific
+output_df &lt;- run_pathfindR(example_pathfindR_input, output_dir = &quot;RA_results&quot;)
+</code></pre>
+<p>Available PINs include <code>&quot;Biogrid&quot;</code>, <code>&quot;STRING&quot;</code>, <code>&quot;GeneMania&quot;</code>, <code>&quot;IntAct&quot;</code>,
+<code>&quot;KEGG&quot;</code> and <code>&quot;mmu_STRING&quot;</code>; available gene sets include <code>&quot;KEGG&quot;</code>, <code>&quot;Reactome&quot;</code>,
+<code>&quot;BioCarta&quot;</code>, the GO families (<code>&quot;GO-All&quot;</code>, <code>&quot;GO-BP&quot;</code>, <code>&quot;GO-CC&quot;</code>, <code>&quot;GO-MF&quot;</code>) and
+<code>&quot;mmu_KEGG&quot;</code>. You can also supply a custom PIN or custom gene sets.</p>
+<p>The result is a data frame, one row per enriched term, with the term ID and
+description, enrichment p-values (lowest/highest across iterations), fold
+enrichment, and the affected up-/down-regulated input genes. The package also
+bundles a pre-computed copy of this output so we can keep going without waiting
+on the search:</p>
+<pre><code class="language-r">head(example_pathfindR_output, 4)
+#&gt;         ID                          Term_Description Fold_Enrichment occurrence
+#&gt; 1 hsa05415                   Diabetic cardiomyopathy          3.7450         10
+#&gt; 2 hsa03082        ATP-dependent chromatin remodeling          4.2131         10
+#&gt; 3 hsa04130 SNARE interactions in vesicular transport          4.9366         10
+#&gt; 4 hsa00190                 Oxidative phosphorylation          3.5587         10
+#&gt;    support   lowest_p  highest_p
+#&gt; 1 0.087103 4.1728e-15 1.1843e-08
+#&gt; 2 0.024579 1.8507e-12 3.1203e-04
+#&gt; 3 0.033857 2.8509e-09 8.7854e-09
+#&gt; 4 0.044888 4.1980e-09 4.3382e-06
+#&gt;                                                      Up_regulated
+#&gt; 1 NCF4, NDUFA1, NDUFB3, UQCRQ, COX6A1, COX7A2, COX7C, MMP9, GAPDH
+#&gt; 2                                                                
+#&gt; 3                                                            STX6
+#&gt; 4 NDUFB3, NDUFA1, COX7C, COX7A2, UQCRQ, COX6A1, ATP6V1D, ATP6V0E1
+#&gt;                                                  Down_regulated
+#&gt; 1              SLC25A5, VDAC1, ATP2A2, MTOR, PDHA1, PDHB, PARP1
+#&gt; 2 ARID1A, SMARCA4, ACTB, ACTG1, BRD7, BRD9, HDAC1, EP400, TRRAP
+#&gt; 3                                           BET1L, SNAP23, STX2
+#&gt; 4                                                      ATP6V0E2
+</code></pre>
+<p>A quick way to eyeball the top hits is the enrichment chart, a bubble plot of the
+most significant terms:</p>
+<pre><code class="language-r">enrichment_chart(example_pathfindR_output, top_terms = 15)
+#&gt; Plotting the enrichment bubble chart
+</code></pre>
+<img src="https://egeulgen.github.io/pathfindR_blog/2026/07/07/pathfindr-typical-workflow/index_files/figure-html/enrichment-chart-1.png" alt="" width="768" style="display: block; margin: auto;" />
+<h2 id="clustering-the-enriched-terms">Clustering the enriched terms</h2>
+<p>Enrichment output is often redundant, several terms describe overlapping
+biology. <code>cluster_enriched_terms()</code> computes pairwise kappa statistics between
+terms, clusters them (hierarchical by default), picks the cluster count that
+maximizes the average silhouette width, and tags one <strong>representative</strong> term per
+cluster:</p>
+<pre><code class="language-r">clustered_df &lt;- cluster_enriched_terms(example_pathfindR_output)
+#&gt; The maximum average silhouette width was 0.24 for k = 60
+</code></pre>
+<p><img src="https://egeulgen.github.io/pathfindR_blog/2026/07/07/pathfindr-typical-workflow/index_files/figure-html/cluster-1.png" alt="" width="768" style="display: block; margin: auto;" /><img src="https://egeulgen.github.io/pathfindR_blog/2026/07/07/pathfindr-typical-workflow/index_files/figure-html/cluster-2.png" alt="" width="768" style="display: block; margin: auto;" /></p>
+<pre><code class="language-r">
+# the representative term from each cluster
+clustered_df[clustered_df$Status == &quot;Representative&quot;, c(&quot;Term_Description&quot;, &quot;Cluster&quot;)]
+#&gt;                                       Term_Description Cluster
+#&gt; 1                              Diabetic cardiomyopathy       1
+#&gt; 2                   ATP-dependent chromatin remodeling       2
+#&gt; 3            SNARE interactions in vesicular transport       3
+#&gt; 7                          Nucleocytoplasmic transport       4
+#&gt; 11                        NF-kappa B signaling pathway       5
+#&gt; 12                         Polycomb repressive complex       6
+#&gt; 14                              Fatty acid degradation       7
+#&gt; 15                                         Spliceosome       8
+#&gt; 18                                     Mismatch repair       9
+#&gt; 19                                         Shigellosis      10
+#&gt; 20                           Th17 cell differentiation      11
+#&gt; 21             Human T-cell leukemia virus 1 infection      12
+#&gt; 22                          Nucleotide excision repair      13
+#&gt; 23         Protein processing in endoplasmic reticulum      14
+#&gt; 24                          TGF-beta signaling pathway      15
+#&gt; 25                                   Carbon metabolism      16
+#&gt; 26                                           Apoptosis      17
+#&gt; 27                                Salmonella infection      18
+#&gt; 28                          Oxytocin signaling pathway      19
+#&gt; 29                          JAK-STAT signaling pathway      20
+#&gt; 32                                  IgSF CAM signaling      21
+#&gt; 33                      Collecting duct acid secretion      22
+#&gt; 37                     Adipocytokine signaling pathway      23
+#&gt; 38                      Ubiquitin mediated proteolysis      24
+#&gt; 40                              Rap1 signaling pathway      25
+#&gt; 42                            Chronic myeloid leukemia      26
+#&gt; 44                                Viral carcinogenesis      27
+#&gt; 45                                 Cellular senescence      28
+#&gt; 46                                          Proteasome      29
+#&gt; 47                                  Autophagy - animal      30
+#&gt; 51                                       Toxoplasmosis      31
+#&gt; 52                      Neurotrophin signaling pathway      32
+#&gt; 55                              mTOR signaling pathway      33
+#&gt; 56                                          Cell cycle      34
+#&gt; 57                              Spinocerebellar ataxia      35
+#&gt; 61                  Cysteine and methionine metabolism      36
+#&gt; 64                   T cell receptor signaling pathway      37
+#&gt; 65            Vasopressin-regulated water reabsorption      38
+#&gt; 66             Neutrophil extracellular trap formation      39
+#&gt; 68              Fluid shear stress and atherosclerosis      40
+#&gt; 70             Transcriptional misregulation in cancer      41
+#&gt; 73                                        Phagocytosis      42
+#&gt; 77                                           Pertussis      43
+#&gt; 79                                         Influenza A      44
+#&gt; 81                    Herpes simplex virus 1 infection      45
+#&gt; 86                             IL-17 signaling pathway      46
+#&gt; 92  Integrated stress response (ISR) signaling pathway      47
+#&gt; 97                        Epstein-Barr virus infection      48
+#&gt; 99                                 Lysosome biogenesis      49
+#&gt; 111                          mRNA surveillance pathway      50
+#&gt; 114                    Arginine and proline metabolism      51
+#&gt; 118                          Lipid and atherosclerosis      52
+#&gt; 123                         Osteoclast differentiation      53
+#&gt; 124                                           Ribosome      54
+#&gt; 126                             FoxO signaling pathway      55
+#&gt; 131               Retrograde endocannabinoid signaling      56
+#&gt; 132                              TNF signaling pathway      57
+#&gt; 134                               Galactose metabolism      58
+#&gt; 136            Fc gamma R-mediated phagosome formation      59
+#&gt; 137                              Antifolate resistance      60
+
+enrichment_chart(example_pathfindR_output, plot_by_cluster = TRUE)
+#&gt; Plotting the enrichment bubble chart
+#&gt; For plotting by cluster, there must a column named `Cluster` in the input data frame!
+</code></pre>
+<img src="https://egeulgen.github.io/pathfindR_blog/2026/07/07/pathfindr-typical-workflow/index_files/figure-html/cluster-3.png" alt="" width="768" style="display: block; margin: auto;" />
+<p>Filtering to representatives gives you a compact, non-redundant shortlist to
+report. There&rsquo;s also a <code>method = &quot;fuzzy&quot;</code> option if you&rsquo;d rather let terms belong
+to more than one cluster.</p>
+<h2 id="visualizing-results">Visualizing results</h2>
+<p>Beyond the enrichment chart, two visuals are especially handy.</p>
+<p>A <strong>term–gene heatmap</strong> shows which input genes drive which terms. If you pass
+the original input, tiles are colored by change value:</p>
+<pre><code class="language-r">term_gene_heatmap(example_pathfindR_output, example_pathfindR_input, num_terms = 10)
+#&gt; ## Processing input. Converting gene symbols,
+#&gt;           if necessary (and if human gene symbols provided)
+#&gt; Number of genes provided in input: 572
+#&gt; Number of genes in input after p-value filtering: 572
+#&gt; 
+#&gt; Could not find any interactions for 1 (0.17%) genes in the PIN
+#&gt; Final number of genes in input: 571
+</code></pre>
+<img src="https://egeulgen.github.io/pathfindR_blog/2026/07/07/pathfindr-typical-workflow/index_files/figure-html/heatmap-1.png" alt="" width="768" style="display: block; margin: auto;" />
+<p>A <strong>term–gene graph</strong> shows the same relationships as a network, making shared
+genes between terms obvious. As of 3.x this is split into a builder and a
+plotter:</p>
+<pre><code class="language-r">g &lt;- create_term_gene_graph(example_pathfindR_output, num_terms = 10)
+create_term_gene_plot(g)
+</code></pre>
+<img src="https://egeulgen.github.io/pathfindR_blog/2026/07/07/pathfindr-typical-workflow/index_files/figure-html/term-gene-graph-1.png" alt="" width="768" style="display: block; margin: auto;" />
+<h2 id="scoring-terms-per-sample">Scoring terms per sample</h2>
+<p>If you have a per-sample expression matrix, <code>score_terms()</code> computes an
+agglomerated z-score for each enriched term in each sample — useful for seeing
+whether a pathway is collectively activated or repressed in particular samples or
+groups:</p>
+<pre><code class="language-r">case_sample_ids &lt;- c(
+  &quot;GSM389703&quot;, &quot;GSM389704&quot;, &quot;GSM389705&quot;, &quot;GSM389706&quot;, &quot;GSM389707&quot;, &quot;GSM389708&quot;
+)
+score_matrix &lt;- score_terms(
+  enrichment_table = clustered_df[clustered_df$Status == &quot;Representative&quot;, ],
+  exp_mat          = example_experiment_matrix,   # genes x samples
+  cases            = case_sample_ids,             # optional
+  plot_hmap        = TRUE
+)
+</code></pre>
+<img src="https://egeulgen.github.io/pathfindR_blog/2026/07/07/pathfindr-typical-workflow/index_files/figure-html/score-1.png" alt="" width="768" style="display: block; margin: auto;" />
+<h2 id="putting-it-together">Putting it together</h2>
+<p>The whole everyday workflow is really just:</p>
+<pre><code class="language-r">library(pathfindR)
+
+output_df    &lt;- run_pathfindR(example_pathfindR_input)          # enrichment
+clustered_df &lt;- cluster_enriched_terms(output_df)               # de-duplicate
+enrichment_chart(clustered_df, plot_by_cluster=TRUE)            # visualize
+term_gene_heatmap(output_df, example_pathfindR_input)           # who drives what
+</code></pre>
+<p>Four functions, and no Java to install. If you&rsquo;re comparing two
+conditions, take a look at <code>combine_pathfindR_results()</code> too.</p>
+<hr>
+<p><em>pathfindR is described in Ulgen E, Ozisik O, Sezerman OU. 2019.
+pathfindR: An R Package for Comprehensive Identification of Enriched Pathways in
+Omics Data Through Active Subnetworks. Front. Genet.
+<a href="https://doi.org/10.3389/fgene.2019.00858">https://doi.org/10.3389/fgene.2019.00858</a>. Docs:
+<a href="https://egeulgen.github.io/pathfindR/">https://egeulgen.github.io/pathfindR/</a>.</em></p>
+]]></content:encoded>
+    </item>
+    
+  </channel>
 </rss>
